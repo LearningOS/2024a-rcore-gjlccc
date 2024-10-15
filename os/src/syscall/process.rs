@@ -1,4 +1,6 @@
 //! Process management syscalls
+
+// use crate::timer::get_time;
 use crate::{
     config::MAX_SYSCALL_NUM,
     task::{exit_current_and_run_next, suspend_current_and_run_next, TaskStatus},
@@ -24,8 +26,11 @@ pub struct TaskInfo {
 }
 
 /// task exits and submit an exit code
-pub fn sys_exit(exit_code: i32) -> ! {
+pub fn sys_exit(exit_code: i32, a: &mut[u32]) -> ! {
     trace!("[kernel] Application exited with code {}", exit_code);
+    for i in 0..MAX_SYSCALL_NUM {
+        a[i] = 0;
+    }
     exit_current_and_run_next();
     panic!("Unreachable in sys_exit!");
 }
@@ -51,7 +56,15 @@ pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
 }
 
 /// YOUR JOB: Finish sys_task_info to pass testcases
-pub fn sys_task_info(_ti: *mut TaskInfo) -> isize {
+pub fn sys_task_info(_ti: *mut TaskInfo , a: &mut[u32]) -> isize {
     trace!("kernel: sys_task_info");
-    -1
+    unsafe{
+        (*_ti).status = TaskStatus::Running;
+        for i in 0..MAX_SYSCALL_NUM {
+            (*_ti).syscall_times[i] = a[i];
+        }
+        (*_ti).time = get_time_us()/1000;
+
+    }
+    0
 }
